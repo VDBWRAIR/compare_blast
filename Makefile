@@ -14,12 +14,16 @@ BLAST_DB = db
 BLASTX_PATH = $(BLAST_VER)/bin/blastx
 BLASTDBUPDATECMD = $(BLAST_VER)/bin/update_blastdb.pl
 BLASTOPTIONS = -db db/nr -task blastx -outfmt 6 -max_target_seqs 10
+PARALLEL_VER = 20150922
+PARALLEL_BZ2 = parallel-$(PARALLEL_VER).tar.bz2
+PARALLEL_URL = http://mirrors.kernel.org/gnu/parallel/$(PARALLEL_BZ2)
+PARALLEL_PATH = parallel-$(PARALLEL_VER)/src/parallel
 
 # Here you can change a few things
 AVAILCPU = 16
 BLASTQUERYFILE = fasta/1.fasta
 
-all: $(BLAST_DB)/done single_cpu_single_thread_blastx.tsv single_cpu_multi_thread_blastx.tsv
+all: $(BLAST_DB)/done single_cpu_single_thread_blastx.tsv single_cpu_multi_thread_blastx.tsv multi_cpu_single_thread_blastx.tsv
 
 $(BLAST_DB)/done: $(BLASTDBUPDATECMD)
 	mkdir -p $(BLAST_DB)
@@ -33,8 +37,18 @@ $(BLASTX_PATH) $(BLASTDBUPDATECMD): $(BLAST_TGZ)
 $(BLAST_TGZ):
 	wget $(BLAST_URL)
 
+$(PARALLEL_BZ2):
+	wget $(PARALLEL_URL)
+
+$(PARALLEL_PATH): $(PARALLEL_BZ2)
+	tar xjvf $(PARALLEL_BZ2)
+	touch $(PARALLEL_PATH)
+
 single_cpu_single_thread_blastx.tsv: $(BLAST_DB)/done
 	time $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 -query $(BLASTQUERYFILE) -out $@
 
-single_cpu_mutli_thread_blastx.tsv: $(BLAST_DB)/done
+single_cpu_multi_thread_blastx.tsv: $(BLAST_DB)/done
 	time $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads $(AVAILCPU) -query $(BLASTQUERYFILE) -out $@
+
+multi_cpu_single_thread_blastx.tsv: $(BLAST_DB)/done
+	python -c "print '$(BLASTQUERYFILE)\n' * 16" | time xargs -P $(AVAILCPU) -IFASTA $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 -query FASTA > $@
