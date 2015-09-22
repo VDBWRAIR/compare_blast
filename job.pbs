@@ -2,9 +2,10 @@
 
 #PBS -N compare_blast
 #PBS -j oe
+#PBS -o joboutput
 #PBS -M vallardt@gmail.com
 #PBS -m abe
-#PBS -l select=1:ncpus=16,walltime=18:00:00
+#PBS -l select=1:ncpus=16:mem=250gb,walltime=18:00:00
 #PBS -A $ACCOUNT
 
 cd $PBS_O_WORKDIR
