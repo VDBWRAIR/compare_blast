@@ -1,4 +1,4 @@
-#!venv/bin/python
+#!/usr/bin/env python
 #
 # Simply subselect numentries amount of sequences from a given
 # fasta file and print them to stdout
