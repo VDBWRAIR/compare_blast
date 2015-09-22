@@ -1,0 +1,11 @@
+#!/bin/bash
+#PBS -A $ACCOUNT
+#PBS -l select=1:ncpus=16:mem=250gb,walltime=03:00:00
+#PBS -m abe
+#PBS -M vallardt@gmail.com
+#PBS -j oe
+#PBS -o joboutput
+
+cd $PBS_O_WORKDIR
+
+make db/nr.dmnd
