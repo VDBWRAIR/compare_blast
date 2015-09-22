@@ -8,6 +8,9 @@
 #PBS -l select=1:ncpus=16:mem=250gb,walltime=18:00:00
 #PBS -A $ACCOUNT
 
+module purge
+module load compiler/gcc/4.9.1
+
 cd $PBS_O_WORKDIR
 
 make

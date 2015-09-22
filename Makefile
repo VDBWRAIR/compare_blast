@@ -18,10 +18,15 @@ PARALLEL_VER = 20150922
 PARALLEL_BZ2 = parallel-$(PARALLEL_VER).tar.bz2
 PARALLEL_URL = http://mirrors.kernel.org/gnu/parallel/$(PARALLEL_BZ2)
 PARALLEL_PATH = parallel-$(PARALLEL_VER)/src/parallel
+VENV_PATH = venv
+PIP_PATH = $(VENV_PATH)/bin/pip
+PYFASTA_PATH = $(VENV_PATH)/bin/pyfasta
+
+# All output files
 OUTPUTFILES = single_cpu_single_thread_blastx.tsv single_cpu_multi_thread_blastx.tsv multi_cpu_single_thread_blastx.tsv
 
 # Here you can change a few things
-AVAILCPU = 16
+AVAILCPU = 10
 BLASTQUERYFILE = fasta/10.fasta.1
 SPLITFASTAPREFIX = fasta/1.fasta
 NUMENTRIES = $(shell grep '>' $(BLASTQUERYFILE) | wc -l)
@@ -51,6 +56,9 @@ $(PARALLEL_PATH): $(PARALLEL_BZ2)
 	tar xjvf $(PARALLEL_BZ2)
 	touch $(PARALLEL_PATH)
 
+$(PIP_PATH):
+	wget https://raw.githubusercontent.com/necrolyte2/bootstrap_vi/master/bootstrap_vi.py -O- | python - $(VENV_PATH)
+
 single_cpu_single_thread_blastx.tsv: $(BLAST_DB)/done
 	# Run file using single cpu and single thread
 	time $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 \
@@ -58,11 +66,11 @@ single_cpu_single_thread_blastx.tsv: $(BLAST_DB)/done
 
 single_cpu_multi_thread_blastx.tsv: $(BLAST_DB)/done
 	# Run same file but use multiple threads
-	time $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads $(NUMENTRIES) \
+	time $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads $(AVAILCPU) \
 	-query $(BLASTQUERYFILE) -out $@
 
 multi_cpu_single_thread_blastx.tsv: $(BLAST_DB)/done
 	# Run same file but split each fasta entry into own file/blast process
 	python -c "print '\n'.join(['$(SPLITFASTAPREFIX).{0}'.format(i) \
-	for i in range(1,$(NUMENTRIES)+1)])" | time xargs -P $(AVAILCPU) -IFASTA \
+	for i in range(1,$(AVAILCPU)+1)])" | time xargs -P $(AVAILCPU) -IFASTA \
 	$(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 -query FASTA > $@
