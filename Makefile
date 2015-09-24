@@ -34,6 +34,7 @@ DIAMOND_DB = $(BLAST_DB)/smallnr.dmnd
 DIAMOND_MAKEDB_OPTIONS = -b 6
 DIAMONDOPTIONS = --db $(DIAMOND_DB) --max-target-seqs 10
 ## Misc software
+TIME = /usr/bin/time
 ### GNU Parallel
 PARALLEL_VER = 20150922
 PARALLEL_BZ2 = parallel-$(PARALLEL_VER).tar.bz2
@@ -51,6 +52,9 @@ BLASTOUTPUT = single_cpu_single_thread_blastx.tsv single_cpu_multi_thread_blastx
 DIAMONDOUTPUT = single_cpu_single_thread_diamond.tsv single_cpu_multi_thread_diamond.tsv
 OUTPUTFILES = $(BLASTOUTPUT) $(DIAMONDOUTPUT) $(SYSINFO)
 ALLSOFTWARE = $(BLAST_VER) $(DIAMOND) $(DIAMOND_TGZ) $(BLAST_TGZ)
+# This file will only be created if make | tee output.txt is used
+LOGFILE = output.txt
+TIMES = times.txt
 # Here you can change a few things
 AVAILCPU = 10
 BLASTQUERYFILE = fasta/10.fasta.1
@@ -105,29 +109,35 @@ $(DIAMOND_DB): $(DIAMOND) $(SMALLFASTA)
 
 single_cpu_single_thread_blastx.tsv: $(SMALLNRDBFILES)
 	# Run file using single cpu and single thread
-	time $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 -query $(BLASTQUERYFILE) -out $@
+	$(TIME) -o $@.$(TIMES) $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 -query $(BLASTQUERYFILE) -out $@ >> $(LOGFILE)
 
 single_cpu_multi_thread_blastx.tsv: $(SMALLNRDBFILES)
 	# Run same file but use multiple threads
-	time $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads $(AVAILCPU) -query $(BLASTQUERYFILE) -out $@
+	$(TIME) -o $@.$(TIMES) $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads $(AVAILCPU) -query $(BLASTQUERYFILE) -out $@ >> $(LOGFILE)
 
 multi_cpu_single_thread_blastx.tsv: $(SMALLNRDBFILES)
 	# Run same file but split each fasta entry into own file/blast process
-	python -c "print '\n'.join(['$(SPLITFASTAPREFIX).{0}'.format(i) for i in range(1,$(AVAILCPU)+1)])" | time xargs -P $(AVAILCPU) -IFASTA $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 -query FASTA > $@
+	python -c "print '\n'.join(['$(SPLITFASTAPREFIX).{0}'.format(i) for i in range(1,$(AVAILCPU)+1)])" | $(TIME) -o $@.$(TIMES) xargs -P $(AVAILCPU) -IFASTA $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 -query FASTA > $@
 
 # Diamond
 
 single_cpu_single_thread_diamond.tsv: $(DIAMOND_DB) $(DIAMOND)
 	# Run file using single cpu and single thread
-	time ./$(DIAMOND) blastx $(DIAMONDOPTIONS) --threads 1 --query $(BLASTQUERYFILE) --daa $@
+	$(TIME) -o $@.$(TIMES) ./$(DIAMOND) blastx $(DIAMONDOPTIONS) --threads 1 --query $(BLASTQUERYFILE) --daa $@ >> $(LOGFILE)
 	./$(DIAMOND) view --daa $@.daa --out $@
-	rm $@.daa
+	#rm $@.daa
 
 single_cpu_multi_thread_diamond.tsv: $(DIAMOND_DB) $(DIAMOND)
 	# Run same file but use multiple threads
-	time ./$(DIAMOND) blastx $(DIAMONDOPTIONS) --threads $(AVAILCPU) --query $(BLASTQUERYFILE) --daa $@
+	$(TIME) -o $@.$(TIMES) ./$(DIAMOND) blastx $(DIAMONDOPTIONS) --threads $(AVAILCPU) --query $(BLASTQUERYFILE) --daa $@ >> $(LOGFILE)
 	./$(DIAMOND) view --daa $@.daa --out $@
-	rm $@.daa
+	#rm $@.daa
+
+times:
+	grep 'elapsed' *.$(TIMES)
+
+hits:
+	wc -l $(OUTPUTFILES)
 
 # Unused stuff
 

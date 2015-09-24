@@ -64,6 +64,14 @@ Then to run the actual tests you can qsub the included job.pbs(which is fairly s
    
 Just running ``make`` will do everything as well if you are testing on a single node
 
+If you want to view the times from each test you can use::
+
+    make times
+
+If you want to view the counts of each result file you can use::
+
+	make hits
+
 Process
 =======
 
