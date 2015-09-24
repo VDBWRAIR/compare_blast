@@ -65,7 +65,9 @@ clean:
 cleanall: clean
 	rm -rf $(BLAST_DB) $(ALLSOFTWARE)
 
-download: $(SMALLFASTA) $(BLASTX_PATH) $(DIAMOND)
+download: $(SMALLFASTA) software
+
+software: $(BLASTX_PATH) $(DIAMOND)
 
 dbs: $(BLAST_DB) $(DIAMOND_DB) $(SMALLBLASTNR) $(SMALLNRDBFILES)
 
