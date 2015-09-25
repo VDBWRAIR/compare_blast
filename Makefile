@@ -1,6 +1,7 @@
 # Makefile to handle comparing different ways to parallelize blast type
 # applications.
 # Because I am newish to Makefiles here are some helpful things:
+#   https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
 #   http://www.chemie.fu-berlin.de/chemnet/use/info/make/make_15.html
 #   $@ stands for the target(left side of :)
 #   $< first dependency(right side of :)
@@ -21,9 +22,9 @@ BLASTMAKEDBCMD = $(BLAST_VER)/bin/makeblastdb
 BLASTDBCMD = $(BLAST_VER)/bin/blastdbcmd
 ### Subselect this many entries from full nr database
 SUBSELECT = 700000
-SMALLNRDB = $(BLAST_DB)/smallnr
+SMALLNRDB = $(BLAST_DB)/smallnr.$(SUBSELECT)
 SMALLNRDBFILES = $(SMALLNRDB).pin $(SMALLNRDB).phr $(SMALLNRDB).psq
-SMALLFASTA = $(BLAST_DB)/smallnr.fasta
+SMALLFASTA = $(BLAST_DB)/smallnr.$(SUBSELECT).fasta
 BLASTOPTIONS = -db $(SMALLNRDB) -task blastx -outfmt 6 -max_target_seqs 10 -evalue 0.001 -gapopen 11 -gapextend 1
 ## Diamond and Diamond DB
 DIAMOND_VER = 0.7.9
