@@ -51,13 +51,14 @@ MEMINFO = meminfo.txt
 SYSINFO = $(CPUINFO) $(MEMINFO)
 BLASTOUTPUT = single_cpu_single_thread_blastx.tsv single_cpu_multi_thread_blastx.tsv multi_cpu_single_thread_blastx.tsv
 DIAMONDOUTPUT = single_cpu_single_thread_diamond.tsv single_cpu_multi_thread_diamond.tsv
-OUTPUTFILES = $(BLASTOUTPUT) $(DIAMONDOUTPUT) $(SYSINFO)
+TSVOUTPUT = $(BLASTOUTPUT) $(DIAMONDOUTPUT)
+OUTPUTFILES = $(TSVOUTPUT) $(SYSINFO)
 ALLSOFTWARE = $(BLAST_VER) $(DIAMOND) $(DIAMOND_TGZ) $(BLAST_TGZ)
 # This file will only be created if make | tee output.txt is used
 LOGFILE = output.txt
 TIMES = times.txt
 # Here you can change a few things
-AVAILCPU = 10
+AVAILCPU = 4
 BLASTQUERYFILE = fasta/10.fasta.1
 SPLITFASTAPREFIX = fasta/1.fasta
 NUMENTRIES = $(shell grep '>' $(BLASTQUERYFILE) | wc -l)
@@ -93,7 +94,7 @@ $(SMALLFASTA): $(BLAST_DB)
 	wget $(BLAST_DB_FASTA_URL) -O- | gunzip -c | ./subselect_fasta.py $(SUBSELECT) > $(SMALLFASTA)
 
 $(SMALLNRDBFILES): $(SMALLFASTA) $(BLASTMAKEDBCMD)
-	$(BLASTMAKEDBCMD) -in $(SMALLFASTA) -title smallnr -dbtype prot -max_file_sz 50GB -out $(SMALLNRDB)
+	$(TIME) $(BLASTMAKEDBCMD) -in $(SMALLFASTA) -title smallnr -dbtype prot -max_file_sz 50GB -out $(SMALLNRDB)
 
 $(BLAST_TGZ):
 	wget $(BLAST_URL)
@@ -106,31 +107,31 @@ $(DIAMOND): $(DIAMOND_TGZ)
 	touch $(DIAMOND)
 
 $(DIAMOND_DB): $(DIAMOND) $(SMALLFASTA)
-	./$(DIAMOND) makedb --db $(DIAMOND_DB) --in $(SMALLFASTA) --threads $(AVAILCPU) $(DIAMOND_MAKEDB_OPTIONS)
+	$(TIME) ./$(DIAMOND) makedb --db $(DIAMOND_DB) --in $(SMALLFASTA) --threads $(AVAILCPU) $(DIAMOND_MAKEDB_OPTIONS)
 
 # NCBI Blastx
 
-single_cpu_single_thread_blastx.tsv: $(SMALLNRDBFILES)
+single_cpu_single_thread_blastx.tsv:
 	# Run file using single cpu and single thread
 	$(TIME) -o $@.$(TIMES) $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 -query $(BLASTQUERYFILE) -out $@ >> $(LOGFILE)
 
-single_cpu_multi_thread_blastx.tsv: $(SMALLNRDBFILES)
+single_cpu_multi_thread_blastx.tsv:
 	# Run same file but use multiple threads
 	$(TIME) -o $@.$(TIMES) $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads $(AVAILCPU) -query $(BLASTQUERYFILE) -out $@ >> $(LOGFILE)
 
-multi_cpu_single_thread_blastx.tsv: $(SMALLNRDBFILES)
+multi_cpu_single_thread_blastx.tsv:
 	# Run same file but split each fasta entry into own file/blast process
 	python -c "print '\n'.join(['$(SPLITFASTAPREFIX).{0}'.format(i) for i in range(1,$(AVAILCPU)+1)])" | $(TIME) -o $@.$(TIMES) xargs -P $(AVAILCPU) -IFASTA $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 -query FASTA > $@
 
 # Diamond
 
-single_cpu_single_thread_diamond.tsv: $(DIAMOND_DB) $(DIAMOND)
+single_cpu_single_thread_diamond.tsv:
 	# Run file using single cpu and single thread
 	$(TIME) -o $@.$(TIMES) ./$(DIAMOND) blastx $(DIAMONDOPTIONS) --threads 1 --query $(BLASTQUERYFILE) --daa $@ >> $(LOGFILE)
 	./$(DIAMOND) view --daa $@.daa --out $@
 	#rm $@.daa
 
-single_cpu_multi_thread_diamond.tsv: $(DIAMOND_DB) $(DIAMOND)
+single_cpu_multi_thread_diamond.tsv:
 	# Run same file but use multiple threads
 	$(TIME) -o $@.$(TIMES) ./$(DIAMOND) blastx $(DIAMONDOPTIONS) --threads $(AVAILCPU) --query $(BLASTQUERYFILE) --daa $@ >> $(LOGFILE)
 	./$(DIAMOND) view --daa $@.daa --out $@
