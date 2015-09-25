@@ -143,6 +143,9 @@ times:
 hits:
 	wc -l $(OUTPUTFILES)
 
+report: $(TSVOUTPUT)
+	./report.py $^
+
 # Unused stuff
 
 $(BLAST_DB)/done: $(BLAST_DB) $(BLASTDBUPDATECMD)

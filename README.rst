@@ -81,6 +81,13 @@ If you want to view the counts of each result file you can use::
 
 	make hits
 
+If you want to generate an easy report::
+
+    make report
+
+This report is a very simple csv/tsv report that lists
+testname,timetaken,uniqhits,memoryused
+
 Process
 =======
 
