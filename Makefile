@@ -31,7 +31,7 @@ DIAMOND_VER = 0.7.9
 DIAMOND_TGZ = diamond-linux64.tar.gz
 DIAMOND_URL = https://github.com/bbuchfink/diamond/releases/download/v$(DIAMOND_VER)/$(DIAMOND_TGZ)
 DIAMOND = diamond
-DIAMOND_DB = $(BLAST_DB)/smallnr.dmnd
+DIAMOND_DB = $(BLAST_DB)/smallnr.$(SUBSELECT).dmnd
 DIAMOND_MAKEDB_OPTIONS = -b 6
 DIAMONDOPTIONS = --db $(DIAMOND_DB) --max-target-seqs 10
 ## Misc software
@@ -58,15 +58,16 @@ ALLSOFTWARE = $(BLAST_VER) $(DIAMOND) $(DIAMOND_TGZ) $(BLAST_TGZ)
 LOGFILE = output.txt
 TIMES = times.txt
 # Here you can change a few things
-AVAILCPU = 4
+AVAILCPU = 10
 BLASTQUERYFILE = fasta/10.fasta.1
 SPLITFASTAPREFIX = fasta/1.fasta
 NUMENTRIES = $(shell grep '>' $(BLASTQUERYFILE) | wc -l)
+GETFILECMD = wget
 
 all: $(OUTPUTFILES)
 
 clean:
-	rm -f $(OUTPUTFILES)
+	rm -f $(OUTPUTFILES) $(addsuffix .times.txt,$(OUTPUTFILES))
 
 cleanall: clean
 	rm -rf $(BLAST_DB) $(ALLSOFTWARE)
@@ -91,7 +92,7 @@ $(BLAST_DB):
 	mkdir -p $(BLAST_DB)
 
 $(SMALLFASTA): $(BLAST_DB)
-	wget $(BLAST_DB_FASTA_URL) -O- | gunzip -c | ./subselect_fasta.py $(SUBSELECT) > $(SMALLFASTA)
+	$(GETFILECMD) $(BLAST_DB_FASTA_URL) -O- | gunzip -c | ./subselect_fasta.py $(SUBSELECT) > $(SMALLFASTA)
 
 $(SMALLNRDBFILES): $(SMALLFASTA) $(BLASTMAKEDBCMD)
 	$(TIME) $(BLASTMAKEDBCMD) -in $(SMALLFASTA) -title smallnr -dbtype prot -max_file_sz 50GB -out $(SMALLNRDB)
