@@ -49,8 +49,9 @@ PYFASTA_PATH = $(VENV_PATH)/bin/pyfasta
 CPUINFO = cpuinfo.txt
 MEMINFO = meminfo.txt
 SYSINFO = $(CPUINFO) $(MEMINFO)
-BLASTOUTPUT = single_cpu_single_thread_blastx.tsv single_cpu_multi_thread_blastx.tsv multi_cpu_single_thread_blastx.tsv
-DIAMONDOUTPUT = single_cpu_single_thread_diamond.tsv single_cpu_multi_thread_diamond.tsv
+AVAILCPU = 10
+BLASTOUTPUT = single_cpu_single_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv single_cpu_multi_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv multi_cpu_single_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv
+DIAMONDOUTPUT = single_cpu_single_thread_diamond.$(AVAILCPU).$(SUBSELECT).tsv single_cpu_multi_thread_diamond.$(AVAILCPU).$(SUBSELECT).tsv
 TSVOUTPUT = $(BLASTOUTPUT) $(DIAMONDOUTPUT)
 OUTPUTFILES = $(TSVOUTPUT) $(SYSINFO)
 ALLSOFTWARE = $(BLAST_VER) $(DIAMOND) $(DIAMOND_TGZ) $(BLAST_TGZ)
@@ -58,7 +59,6 @@ ALLSOFTWARE = $(BLAST_VER) $(DIAMOND) $(DIAMOND_TGZ) $(BLAST_TGZ)
 LOGFILE = output.txt
 TIMES = times.txt
 # Here you can change a few things
-AVAILCPU = 10
 BLASTQUERYFILE = fasta/10.fasta.1
 SPLITFASTAPREFIX = fasta/1.fasta
 NUMENTRIES = $(shell grep '>' $(BLASTQUERYFILE) | wc -l)
@@ -112,27 +112,27 @@ $(DIAMOND_DB): $(DIAMOND) $(SMALLFASTA)
 
 # NCBI Blastx
 
-single_cpu_single_thread_blastx.tsv:
+single_cpu_single_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv:
 	# Run file using single cpu and single thread
 	$(TIME) -o $@.$(TIMES) $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 -query $(BLASTQUERYFILE) -out $@ >> $(LOGFILE)
 
-single_cpu_multi_thread_blastx.tsv:
+single_cpu_multi_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv:
 	# Run same file but use multiple threads
 	$(TIME) -o $@.$(TIMES) $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads $(AVAILCPU) -query $(BLASTQUERYFILE) -out $@ >> $(LOGFILE)
 
-multi_cpu_single_thread_blastx.tsv:
+multi_cpu_single_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv:
 	# Run same file but split each fasta entry into own file/blast process
 	python -c "print '\n'.join(['$(SPLITFASTAPREFIX).{0}'.format(i) for i in range(1,$(AVAILCPU)+1)])" | $(TIME) -o $@.$(TIMES) xargs -P $(AVAILCPU) -IFASTA $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 -query FASTA > $@
 
 # Diamond
 
-single_cpu_single_thread_diamond.tsv:
+single_cpu_single_thread_diamond.$(AVAILCPU).$(SUBSELECT).tsv:
 	# Run file using single cpu and single thread
 	$(TIME) -o $@.$(TIMES) ./$(DIAMOND) blastx $(DIAMONDOPTIONS) --threads 1 --query $(BLASTQUERYFILE) --daa $@ >> $(LOGFILE)
 	./$(DIAMOND) view --daa $@.daa --out $@
 	#rm $@.daa
 
-single_cpu_multi_thread_diamond.tsv:
+single_cpu_multi_thread_diamond.$(AVAILCPU).$(SUBSELECT).tsv:
 	# Run same file but use multiple threads
 	$(TIME) -o $@.$(TIMES) ./$(DIAMOND) blastx $(DIAMONDOPTIONS) --threads $(AVAILCPU) --query $(BLASTQUERYFILE) --daa $@ >> $(LOGFILE)
 	./$(DIAMOND) view --daa $@.daa --out $@
@@ -144,8 +144,9 @@ times:
 hits:
 	wc -l $(OUTPUTFILES)
 
-report: $(TSVOUTPUT)
-	./report.py $^
+report:
+	@echo "AVAILCPU: $(AVAILCPU)"
+	./report.py $(TSVOUTPUT)
 
 # Unused stuff
 
