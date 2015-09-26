@@ -64,7 +64,7 @@ SPLITFASTAPREFIX = fasta/1.fasta
 NUMENTRIES = $(shell grep '>' $(BLASTQUERYFILE) | wc -l)
 GETFILECMD = wget
 
-all: $(OUTPUTFILES)
+tests: $(OUTPUTFILES)
 
 clean:
 	rm -f $(OUTPUTFILES) $(addsuffix .times.txt,$(OUTPUTFILES))
