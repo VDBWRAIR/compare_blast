@@ -55,14 +55,28 @@ This should download and create all databases as well as executables required
 .. code-block:: bash
 
    make download
+
+Then you will want to also probably build the databases. This is seprate so that
+the databases don't keep trying to be built
+
+The SUBSELECT=700000 defines how many sequences you will use to build the databases
+
+.. code-block:: bash
+
+    make dbs SUBSELECT=700000
    
 Then to run the actual tests you can qsub the included job.pbs(which is fairly specific to PBS) or if not on HPC Cluster you can just run
 
 .. code-block:: bash
 
-   make
+   make tests SUBSELECT=700000
    
-Just running ``make`` will do everything as well if you are testing on a single node
+If you want to generate an easy report::
+
+    make report
+
+This report is a very simple csv/tsv report that lists
+testname,timetaken,uniqhits,memoryused
 
 Process
 =======

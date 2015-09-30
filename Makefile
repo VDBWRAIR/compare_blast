@@ -1,12 +1,12 @@
 # Makefile to handle comparing different ways to parallelize blast type
 # applications.
 # Because I am newish to Makefiles here are some helpful things:
+#   https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
 #   http://www.chemie.fu-berlin.de/chemnet/use/info/make/make_15.html
 #   $@ stands for the target(left side of :)
 #   $< first dependency(right side of :)
 #   $? all dependencies newer than target
 
-TSVOUTPUT = $(BLASTOUTPUT) $(DIAMONDOUTPUT) $(SEQROUTPUT)
 # These are pretty much static args and shouldn't really be messed with
 ## Blast & Blast DB
 BLAST_VER = ncbi-blast-2.2.31+
@@ -22,16 +22,16 @@ BLASTMAKEDBCMD = $(BLAST_VER)/bin/makeblastdb
 BLASTDBCMD = $(BLAST_VER)/bin/blastdbcmd
 ### Subselect this many entries from full nr database
 SUBSELECT = 700000
-SMALLNRDB = $(BLAST_DB)/smallnr
+SMALLNRDB = $(BLAST_DB)/smallnr.$(SUBSELECT)
 SMALLNRDBFILES = $(SMALLNRDB).pin $(SMALLNRDB).phr $(SMALLNRDB).psq
-SMALLFASTA = $(BLAST_DB)/smallnr.fasta
+SMALLFASTA = $(BLAST_DB)/smallnr.$(SUBSELECT).fasta
 BLASTOPTIONS = -db $(SMALLNRDB) -task blastx -outfmt 6 -max_target_seqs 10 -evalue 0.001 -gapopen 11 -gapextend 1
 ## Diamond and Diamond DB
 DIAMOND_VER = 0.7.9
 DIAMOND_TGZ = diamond-linux64.tar.gz
 DIAMOND_URL = https://github.com/bbuchfink/diamond/releases/download/v$(DIAMOND_VER)/$(DIAMOND_TGZ)
 DIAMOND = diamond
-DIAMOND_DB = $(BLAST_DB)/smallnr.dmnd
+DIAMOND_DB = $(BLAST_DB)/smallnr.$(SUBSELECT).dmnd
 DIAMOND_MAKEDB_OPTIONS = -b 6
 DIAMONDOPTIONS = --db $(DIAMOND_DB) --max-target-seqs 10
 ## SEQR and DB
@@ -42,9 +42,9 @@ SEQR_SRC = seqr-clojure
 SEQR_DB = $(SEQR_SRC)/testdata/solr/sequence/data
 SEQR_JAR = seqr.jar                                                        #dashes for the empty alignment fields
 SEQROPTIONS = --is_dna --db $(SEQR_SRC)/testdata/solr --outfm 6 query-id id - - - - - - - - - - 
-SEQROUTPUT = single_cp_multi_thread_seqr.$(AVAILCPU).$(SUBSELECT).tsv
 
 ## Misc software
+TIME = /usr/bin/time
 ### GNU Parallel
 PARALLEL_VER = 20150922
 PARALLEL_BZ2 = parallel-$(PARALLEL_VER).tar.bz2
@@ -58,20 +58,26 @@ PYFASTA_PATH = $(VENV_PATH)/bin/pyfasta
 CPUINFO = cpuinfo.txt
 MEMINFO = meminfo.txt
 SYSINFO = $(CPUINFO) $(MEMINFO)
-BLASTOUTPUT = single_cpu_single_thread_blastx.tsv single_cpu_multi_thread_blastx.tsv multi_cpu_single_thread_blastx.tsv
-DIAMONDOUTPUT = single_cpu_single_thread_diamond.tsv single_cpu_multi_thread_diamond.tsv
-OUTPUTFILES = $(BLASTOUTPUT) $(DIAMONDOUTPUT) $(SYSINFO) $(SEQROUTPUT)
-ALLSOFTWARE = $(BLAST_VER) $(DIAMOND) $(DIAMOND_TGZ) $(BLAST_TGZ)
-# Here you can change a few things
 AVAILCPU = 10
+SEQROUTPUT = single_cp_multi_thread_seqr.$(AVAILCPU).$(SUBSELECT).tsv
+BLASTOUTPUT = single_cpu_single_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv single_cpu_multi_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv multi_cpu_single_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv
+DIAMONDOUTPUT = single_cpu_single_thread_diamond.$(AVAILCPU).$(SUBSELECT).tsv single_cpu_multi_thread_diamond.$(AVAILCPU).$(SUBSELECT).tsv
+TSVOUTPUT = $(BLASTOUTPUT) $(DIAMONDOUTPUT) $(SEQROUTPUT)
+OUTPUTFILES = $(TSVOUTPUT) $(SYSINFO)
+ALLSOFTWARE = $(BLAST_VER) $(DIAMOND) $(DIAMOND_TGZ) $(BLAST_TGZ)
+# This file will only be created if make | tee output.txt is used
+LOGFILE = output.txt
+TIMES = times.txt
+# Here you can change a few things
 BLASTQUERYFILE = fasta/10.fasta.1
 SPLITFASTAPREFIX = fasta/1.fasta
 NUMENTRIES = $(shell grep '>' $(BLASTQUERYFILE) | wc -l)
+GETFILECMD = wget
 
-all: $(OUTPUTFILES)
+tests: $(OUTPUTFILES)
 
 clean:
-	rm -f $(OUTPUTFILES)
+	rm -f $(OUTPUTFILES) $(addsuffix .times.txt,$(OUTPUTFILES))
 
 cleanall: clean
 	rm -rf $(BLAST_DB) $(ALLSOFTWARE)
@@ -96,10 +102,10 @@ $(BLAST_DB):
 	mkdir -p $(BLAST_DB)
 
 $(SMALLFASTA): $(BLAST_DB)
-	wget $(BLAST_DB_FASTA_URL) -O- | gunzip -c | ./subselect_fasta.py $(SUBSELECT) > $(SMALLFASTA)
+	$(GETFILECMD) $(BLAST_DB_FASTA_URL) -O- | gunzip -c | ./subselect_fasta.py $(SUBSELECT) > $(SMALLFASTA)
 
 $(SMALLNRDBFILES): $(SMALLFASTA) $(BLASTMAKEDBCMD)
-	$(BLASTMAKEDBCMD) -in $(SMALLFASTA) -title smallnr -dbtype prot -max_file_sz 50GB -out $(SMALLNRDB)
+	$(TIME) $(BLASTMAKEDBCMD) -in $(SMALLFASTA) -title smallnr -dbtype prot -max_file_sz 50GB -out $(SMALLNRDB)
 
 $(BLAST_TGZ):
 	wget $(BLAST_URL)
@@ -112,7 +118,7 @@ $(DIAMOND): $(DIAMOND_TGZ)
 	touch $(DIAMOND)
 
 $(DIAMOND_DB): $(DIAMOND) $(SMALLFASTA)
-	./$(DIAMOND) makedb --db $(DIAMOND_DB) --in $(SMALLFASTA) --threads $(AVAILCPU) $(DIAMOND_MAKEDB_OPTIONS)
+	$(TIME) ./$(DIAMOND) makedb --db $(DIAMOND_DB) --in $(SMALLFASTA) --threads $(AVAILCPU) $(DIAMOND_MAKEDB_OPTIONS)
 
 $(SEQR_JAR):
 	wget $(SEQR_JAR_URL)
@@ -133,31 +139,41 @@ single_cp_multi_thread_seqr.$(AVAILCPU).$(SUBSELECT).tsv: $(SEQR_DB) $(SEQR_JAR)
 
 # NCBI Blastx
 
-single_cpu_single_thread_blastx.tsv: $(SMALLNRDBFILES)
+single_cpu_single_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv:
 	# Run file using single cpu and single thread
-	time $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 -query $(BLASTQUERYFILE) -out $@
+	$(TIME) -o $@.$(TIMES) $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 -query $(BLASTQUERYFILE) -out $@ >> $(LOGFILE)
 
-single_cpu_multi_thread_blastx.tsv: $(SMALLNRDBFILES)
+single_cpu_multi_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv:
 	# Run same file but use multiple threads
-	time $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads $(AVAILCPU) -query $(BLASTQUERYFILE) -out $@
+	$(TIME) -o $@.$(TIMES) $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads $(AVAILCPU) -query $(BLASTQUERYFILE) -out $@ >> $(LOGFILE)
 
-multi_cpu_single_thread_blastx.tsv: $(SMALLNRDBFILES)
+multi_cpu_single_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv:
 	# Run same file but split each fasta entry into own file/blast process
-	python -c "print '\n'.join(['$(SPLITFASTAPREFIX).{0}'.format(i) for i in range(1,$(AVAILCPU)+1)])" | time xargs -P $(AVAILCPU) -IFASTA $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 -query FASTA > $@
+	python -c "print '\n'.join(['$(SPLITFASTAPREFIX).{0}'.format(i) for i in range(1,$(AVAILCPU)+1)])" | $(TIME) -o $@.$(TIMES) xargs -P $(AVAILCPU) -IFASTA $(BLASTX_PATH) $(BLASTOPTIONS) -num_threads 1 -query FASTA > $@
 
 # Diamond
 
-single_cpu_single_thread_diamond.tsv: $(DIAMOND_DB) $(DIAMOND)
+single_cpu_single_thread_diamond.$(AVAILCPU).$(SUBSELECT).tsv:
 	# Run file using single cpu and single thread
-	time ./$(DIAMOND) blastx $(DIAMONDOPTIONS) --threads 1 --query $(BLASTQUERYFILE) --daa $@
+	$(TIME) -o $@.$(TIMES) ./$(DIAMOND) blastx $(DIAMONDOPTIONS) --threads 1 --query $(BLASTQUERYFILE) --daa $@ >> $(LOGFILE)
 	./$(DIAMOND) view --daa $@.daa --out $@
-	rm $@.daa
+	#rm $@.daa
 
-single_cpu_multi_thread_diamond.tsv: $(DIAMOND_DB) $(DIAMOND)
+single_cpu_multi_thread_diamond.$(AVAILCPU).$(SUBSELECT).tsv:
 	# Run same file but use multiple threads
-	time ./$(DIAMOND) blastx $(DIAMONDOPTIONS) --threads $(AVAILCPU) --query $(BLASTQUERYFILE) --daa $@
+	$(TIME) -o $@.$(TIMES) ./$(DIAMOND) blastx $(DIAMONDOPTIONS) --threads $(AVAILCPU) --query $(BLASTQUERYFILE) --daa $@ >> $(LOGFILE)
 	./$(DIAMOND) view --daa $@.daa --out $@
-	rm $@.daa
+	#rm $@.daa
+
+times:
+	grep 'elapsed' *.$(TIMES)
+
+hits:
+	wc -l $(OUTPUTFILES)
+
+report:
+	@echo "AVAILCPU: $(AVAILCPU)"
+	./report.py $(TSVOUTPUT)
 
 # Unused stuff
 
