@@ -6,6 +6,7 @@
 #   $< first dependency(right side of :)
 #   $? all dependencies newer than target
 
+TSVOUTPUT = $(BLASTOUTPUT) $(DIAMONDOUTPUT) $(SEQROUTPUT)
 # These are pretty much static args and shouldn't really be messed with
 ## Blast & Blast DB
 BLAST_VER = ncbi-blast-2.2.31+
@@ -41,6 +42,7 @@ SEQR_SRC = seqr-clojure
 SEQR_DB = $(SEQR_SRC)/testdata/solr/sequence/data
 SEQR_JAR = seqr.jar                                                        #dashes for the empty alignment fields
 SEQROPTIONS = --is_dna --db $(SEQR_SRC)/testdata/solr --outfm 6 query-id id - - - - - - - - - - 
+SEQROUTPUT = single_cp_multi_thread_seqr.$(AVAILCPU).$(SUBSELECT).tsv
 
 ## Misc software
 ### GNU Parallel
@@ -58,7 +60,7 @@ MEMINFO = meminfo.txt
 SYSINFO = $(CPUINFO) $(MEMINFO)
 BLASTOUTPUT = single_cpu_single_thread_blastx.tsv single_cpu_multi_thread_blastx.tsv multi_cpu_single_thread_blastx.tsv
 DIAMONDOUTPUT = single_cpu_single_thread_diamond.tsv single_cpu_multi_thread_diamond.tsv
-OUTPUTFILES = $(BLASTOUTPUT) $(DIAMONDOUTPUT) $(SYSINFO)
+OUTPUTFILES = $(BLASTOUTPUT) $(DIAMONDOUTPUT) $(SYSINFO) $(SEQROUTPUT)
 ALLSOFTWARE = $(BLAST_VER) $(DIAMOND) $(DIAMOND_TGZ) $(BLAST_TGZ)
 # Here you can change a few things
 AVAILCPU = 10
@@ -126,8 +128,8 @@ $(SEQR_DB): $(SEQR_SRC) $(SEQR_JAR) $(SMALLFASTA)
 # *May* require java 8
 # Currently multi-cpu is not supported with embedded seqr because it causes database lock. it would work with server seqr.
 # Currently seqr is multi-threaded by default, not sure if it actually helps or not.
-single_cp_multi_thread_seqr.tsv: $(SEQR_DB) $(SEQR_JAR)
-	time java -jar $(SEQR_JAR) search $(BLASTQUERYFILE) $(SEQROPTIONS) 
+single_cp_multi_thread_seqr.$(AVAILCPU).$(SUBSELECT).tsv: $(SEQR_DB) $(SEQR_JAR)
+	time java -jar $(SEQR_JAR) search $(BLASTQUERYFILE) $(SEQROPTIONS) > $@
 
 # NCBI Blastx
 
