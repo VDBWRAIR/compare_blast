@@ -38,7 +38,7 @@ DIAMONDOPTIONS = --db $(DIAMOND_DB) --max-target-seqs 10
 SEQR_VER =  0.0.1-alpha
 SEQR_JAR_URL = https://github.com/averagehat/seqr-clojure/releases/download/$(SEQR_VER)/seqr.jar
 SEQR_SRC_URL = https://github.com/averagehat/seqr-clojure/archive/$(SEQR_VER).tar.gz
-SEQR_SRC = seqr-clojure
+SEQR_SRC = seqr-clojure-$(SEQR_VER)
 SEQR_DB = $(SEQR_SRC)/testdata/solr/sequence/data
 SEQR_JAR = seqr.jar                                                        #dashes for the empty alignment fields
 SEQROPTIONS = --is_dna --db $(SEQR_SRC)/testdata/solr --outfm 6 query-id id - - - - - - - - - - 
@@ -140,6 +140,7 @@ $(SEQR_DB): $(SEQR_SRC) $(SEQR_JAR) $(SMALLFASTA)
 single_cp_multi_thread_seqr.$(AVAILCPU).$(SUBSELECT).tsv: $(SEQR_DB) $(SEQR_JAR)
 	time java -jar $(SEQR_JAR) search $(BLASTQUERYFILE) $(SEQROPTIONS) > $@
 
+seqr_test: single_cp_multi_thread_seqr.$(AVAILCPU).$(SUBSELECT).tsv #just for debuggin
 # NCBI Blastx
 
 single_cpu_single_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv:
