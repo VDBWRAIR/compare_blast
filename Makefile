@@ -33,6 +33,15 @@ DIAMOND = diamond
 DIAMOND_DB = $(BLAST_DB)/smallnr.dmnd
 DIAMOND_MAKEDB_OPTIONS = -b 6
 DIAMONDOPTIONS = --db $(DIAMOND_DB) --max-target-seqs 10
+## SEQR and DB
+SEQR_VER =  0.0.1-alpha
+SEQR_JAR_URL = https://github.com/averagehat/seqr-clojure/releases/download/$(SEQR_VER)/seqr.jar
+SEQR_SRC_URL = https://github.com/averagehat/seqr-clojure/archive/$(SEQR_VER).tar.gz
+SEQR_SRC = seqr-clojure
+SEQR_DB = $(SEQR_SRC)/testdata/solr/sequence/data
+SEQR_JAR = seqr.jar                                                        #dashes for the empty alignment fields
+SEQROPTIONS = --is_dna --db $(SEQR_SRC)/testdata/solr --outfm 6 query-id id - - - - - - - - - - 
+
 ## Misc software
 ### GNU Parallel
 PARALLEL_VER = 20150922
@@ -67,9 +76,9 @@ cleanall: clean
 
 download: $(SMALLFASTA) software
 
-software: $(BLASTX_PATH) $(DIAMOND)
+software: $(BLASTX_PATH) $(DIAMOND) $(SEQR_JAR) $(SEQR_SRC)
 
-dbs: $(BLAST_DB) $(DIAMOND_DB) $(SMALLBLASTNR) $(SMALLNRDBFILES)
+dbs: $(BLAST_DB) $(DIAMOND_DB) $(SMALLBLASTNR) $(SMALLNRDBFILES) $(SEQR_DB)
 
 $(CPUINFO):
 	lscpu | tee $(CPUINFO)
@@ -102,6 +111,23 @@ $(DIAMOND): $(DIAMOND_TGZ)
 
 $(DIAMOND_DB): $(DIAMOND) $(SMALLFASTA)
 	./$(DIAMOND) makedb --db $(DIAMOND_DB) --in $(SMALLFASTA) --threads $(AVAILCPU) $(DIAMOND_MAKEDB_OPTIONS)
+
+$(SEQR_JAR):
+	wget $(SEQR_JAR_URL)
+
+$(SEQR_SRC): 
+	wget $(SEQR_SRC_URL)
+	tar xvf seqr-clojure-$(SEQR_VER) 
+
+$(SEQR_DB): $(SEQR_SRC) $(SEQR_JAR) $(SMALLFASTA)
+	java -jar $(SEQR_JAR) index $(SMALLFASTA) --in_format fasta -d $(SEQR_SRC)/testdata/solr 
+
+# SEQR
+# *May* require java 8
+# Currently multi-cpu is not supported with embedded seqr because it causes database lock. it would work with server seqr.
+# Currently seqr is multi-threaded by default, not sure if it actually helps or not.
+single_cp_multi_thread_seqr.tsv: $(SEQR_DB) $(SEQR_JAR)
+	time java -jar $(SEQR_JAR) search $(BLASTQUERYFILE) $(SEQROPTIONS) 
 
 # NCBI Blastx
 
