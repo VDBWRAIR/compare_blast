@@ -123,9 +123,12 @@ $(DIAMOND_DB): $(DIAMOND) $(SMALLFASTA)
 $(SEQR_JAR):
 	wget $(SEQR_JAR_URL)
 
-$(SEQR_SRC): 
+
+$(SEQR_VER).tar.gz: 
 	wget $(SEQR_SRC_URL)
-	tar xvf seqr-clojure-$(SEQR_VER) 
+
+$(SEQR_SRC): $(SEQR_VER).tar.gz
+	tar xvf $(SEQR_VER).tar.gz
 
 $(SEQR_DB): $(SEQR_SRC) $(SEQR_JAR) $(SMALLFASTA)
 	java -jar $(SEQR_JAR) index $(SMALLFASTA) --in_format fasta -d $(SEQR_SRC)/testdata/solr 
