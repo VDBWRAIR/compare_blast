@@ -24,6 +24,7 @@ BLASTDBCMD = $(BLAST_VER)/bin/blastdbcmd
 SUBSELECT = 700000
 SMALLNRDB = $(BLAST_DB)/smallnr.$(SUBSELECT)
 SMALLNRDBFILES = $(SMALLNRDB).pin $(SMALLNRDB).phr $(SMALLNRDB).psq
+BIGFASTA = nr.all.fasta
 SMALLFASTA = $(BLAST_DB)/smallnr.$(SUBSELECT).fasta
 BLASTOPTIONS = -db $(SMALLNRDB) -task blastx -outfmt 6 -max_target_seqs 10 -evalue 0.001 -gapopen 11 -gapextend 1
 ## Diamond and Diamond DB
