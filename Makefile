@@ -74,6 +74,8 @@ SPLITFASTAPREFIX = fasta/1.fasta
 # NUMENTRIES = $(shell grep '>' $(BLASTQUERYFILE) | wc -l)
 GETFILECMD = wget
 
+testprep: download dbs
+
 tests: $(OUTPUTFILES)
 
 clean:
@@ -88,7 +90,6 @@ software: $(BLASTX_PATH) $(DIAMOND) $(SEQR_JAR) $(SEQR_SRC)
 
 dbs: $(BLAST_DB) $(DIAMOND_DB) $(SMALLBLASTNR) $(SMALLNRDBFILES) $(SEQR_DB)
 
-testprep: download dbs
 
 $(CPUINFO):
 	lscpu | tee $(CPUINFO)
@@ -129,7 +130,6 @@ $(DIAMOND_DB): $(DIAMOND) $(SMALLFASTA)
 $(SEQR_JAR):
 	wget $(SEQR_JAR_URL)
 
-
 $(SEQR_VER).tar.gz: 
 	wget $(SEQR_SRC_URL)
 
@@ -143,10 +143,10 @@ $(SEQR_DB): $(SEQR_SRC) $(SEQR_JAR) $(SMALLFASTA)
 # *May* require java 8
 # Currently multi-cpu is not supported with embedded seqr because it causes database lock. it would work with server seqr.
 # Currently seqr is multi-threaded by default, not sure if it actually helps or not.
-single_cp_multi_thread_seqr.$(AVAILCPU).$(SUBSELECT).tsv: $(SEQR_DB) $(SEQR_JAR)
+single_cpu_multi_thread_seqr.$(AVAILCPU).$(SUBSELECT).tsv: $(SEQR_DB) $(SEQR_JAR)
 	time java -jar $(SEQR_JAR) search $(BLASTQUERYFILE) $(SEQROPTIONS) > $@
 
-seqr_test: single_cp_multi_thread_seqr.$(AVAILCPU).$(SUBSELECT).tsv #just for debuggin
+#seqr_test: single_cpu_multi_thread_seqr.$(AVAILCPU).$(SUBSELECT).tsv #just for debuggin
 # NCBI Blastx
 
 single_cpu_single_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv:
