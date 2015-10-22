@@ -88,6 +88,8 @@ software: $(BLASTX_PATH) $(DIAMOND) $(SEQR_JAR) $(SEQR_SRC)
 
 dbs: $(BLAST_DB) $(DIAMOND_DB) $(SMALLBLASTNR) $(SMALLNRDBFILES) $(SEQR_DB)
 
+testprep: download dbs
+
 $(CPUINFO):
 	lscpu | tee $(CPUINFO)
 
@@ -101,8 +103,12 @@ $(BLASTX_PATH) $(BLASTMAKEDBCMD) $(BLASTDBUPDATECMD):
 $(BLAST_DB):
 	mkdir -p $(BLAST_DB)
 
-$(SMALLFASTA): $(BLAST_DB)
-	$(GETFILECMD) $(BLAST_DB_FASTA_URL) -O- | gunzip -c | ./subselect_fasta.py $(SUBSELECT) > $(SMALLFASTA)
+$(SMALLFASTA): $(BIGFASTA)
+	cat $(BIGFASTA) | ./subselect_fasta.py $(SUBSELECT) > $(SMALLFASTA)
+
+$(BIGFASTA): $(BLAST_DB)
+	$(GETFILECMD) $(BLAST_DB_FASTA_URL) -O- | gunzip -c > $(BIGFASTA)
+	
 
 $(SMALLNRDBFILES): $(SMALLFASTA) $(BLASTMAKEDBCMD)
 	$(TIME) $(BLASTMAKEDBCMD) -in $(SMALLFASTA) -title smallnr -dbtype prot -max_file_sz 50GB -out $(SMALLNRDB)
