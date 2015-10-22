@@ -35,7 +35,7 @@ DIAMOND_DB = $(BLAST_DB)/smallnr.$(SUBSELECT).dmnd
 DIAMOND_MAKEDB_OPTIONS = -b 6
 DIAMONDOPTIONS = --db $(DIAMOND_DB) --max-target-seqs 10
 ## SEQR and DB
-SEQR_VER =  0.0.1-alpha
+SEQR_VER = 0.0.1-alpha
 SEQR_JAR_URL = https://github.com/averagehat/seqr-clojure/releases/download/$(SEQR_VER)/seqr.jar
 SEQR_SRC_URL = https://github.com/averagehat/seqr-clojure/archive/$(SEQR_VER).tar.gz
 SEQR_SRC = seqr-clojure-$(SEQR_VER)
@@ -59,7 +59,7 @@ CPUINFO = cpuinfo.txt
 MEMINFO = meminfo.txt
 SYSINFO = $(CPUINFO) $(MEMINFO)
 AVAILCPU = 10
-SEQROUTPUT = single_cp_multi_thread_seqr.$(AVAILCPU).$(SUBSELECT).tsv
+SEQROUTPUT = single_cpu_multi_thread_seqr.$(AVAILCPU).$(SUBSELECT).tsv
 BLASTOUTPUT = single_cpu_single_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv single_cpu_multi_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv multi_cpu_single_thread_blastx.$(AVAILCPU).$(SUBSELECT).tsv
 DIAMONDOUTPUT = single_cpu_single_thread_diamond.$(AVAILCPU).$(SUBSELECT).tsv single_cpu_multi_thread_diamond.$(AVAILCPU).$(SUBSELECT).tsv
 TSVOUTPUT = $(BLASTOUTPUT) $(DIAMONDOUTPUT) $(SEQROUTPUT)
@@ -71,7 +71,7 @@ TIMES = times.txt
 # Here you can change a few things
 BLASTQUERYFILE = fasta/10.fasta.1
 SPLITFASTAPREFIX = fasta/1.fasta
-NUMENTRIES = $(shell grep '>' $(BLASTQUERYFILE) | wc -l)
+# NUMENTRIES = $(shell grep '>' $(BLASTQUERYFILE) | wc -l)
 GETFILECMD = wget
 
 tests: $(OUTPUTFILES)
